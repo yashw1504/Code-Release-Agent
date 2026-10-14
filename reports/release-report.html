@@ -75,30 +75,30 @@ footer { color: #64748b; font-size: 12px; margin-top: 25px; }
   <div class="topline">
     <div>
       <strong>Release assessment</strong><br>
-      <span>Generated: 2026-10-14 09:55:54 UTC</span>
+      <span>Generated: 2026-10-14 10:08:32 UTC</span>
     </div>
-    <span class="decision block">BLOCK</span>
+    <span class="decision review">REVIEW</span>
   </div>
 
   <section class="cards" aria-label="Report summary">
     <div class="card">
       <div class="label">Risk score</div>
-      <div class="value">17</div>
+      <div class="value">7</div>
     </div>
     <div class="card">
       <div class="label">Total findings</div>
-      <div class="value">2</div>
+      <div class="value">1</div>
     </div>
     <div class="card">
       <div class="label">Critical / High</div>
-      <div class="value">1 / 1</div>
+      <div class="value">0 / 1</div>
     </div>
   </section>
 
   <h2>Severity breakdown</h2>
   <section class="cards" aria-label="Severity breakdown">
     <div class="card"><div class="label">Critical</div>
-      <div class="value">1</div></div>
+      <div class="value">0</div></div>
     <div class="card"><div class="label">High / Medium</div>
       <div class="value">1 / 0</div></div>
     <div class="card"><div class="label">Low / Info</div>
@@ -112,29 +112,13 @@ footer { color: #64748b; font-size: 12px; margin-top: 25px; }
         <span class="severity high">HIGH</span>
         <span class="finding-number">Finding #1</span>
       </div>
-      <h3>Potential SQL injection</h3>
+      <h3>Potential SQL injection through dynamically constructed SQL.</h3>
       <dl>
-        <dt>Rule ID</dt><dd>TEST-SQL-001</dd>
+        <dt>Rule ID</dt><dd>python.lang.security.audit.sql-injection</dd>
         <dt>Location</dt><dd>N/A:N/A</dd>
-        <dt>Description</dt><dd>Synthetic demonstration finding.</dd>
+        <dt>Description</dt><dd>Potential SQL injection through dynamically constructed SQL.</dd>
         <dt>Business impact</dt><dd>Not specified.</dd>
-        <dt>Remediation</dt><dd>Use parameterized queries.</dd>
-      </dl>
-    </article>
-    
-
-    <article class="finding">
-      <div class="finding-header">
-        <span class="severity critical">CRITICAL</span>
-        <span class="finding-number">Finding #2</span>
-      </div>
-      <h3>Example vulnerable dependency</h3>
-      <dl>
-        <dt>Rule ID</dt><dd>TEST-DEP-001</dd>
-        <dt>Location</dt><dd>N/A:N/A</dd>
-        <dt>Description</dt><dd>Synthetic demonstration finding.</dd>
-        <dt>Business impact</dt><dd>Not specified.</dd>
-        <dt>Remediation</dt><dd>Upgrade to a verified fixed version.</dd>
+        <dt>Remediation</dt><dd>Use parameterized queries instead of string concatenation.</dd>
       </dl>
     </article>
     

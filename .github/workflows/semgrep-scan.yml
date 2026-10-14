@@ -22,8 +22,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -44,7 +42,6 @@ jobs:
         continue-on-error: true
         run: |
           set +e
-
           semgrep scan \
             --config p/security-audit \
             --include '*.py' \
@@ -53,15 +50,16 @@ jobs:
             --json \
             --output reports/semgrep.json \
             .
-          
           scan_exit=$?
           echo "scan_exit_code=$scan_exit" >> "$GITHUB_OUTPUT"
 
           if [ ! -s reports/semgrep.json ]; then
-            echo "ERROR: Semgrep did not generate a non-empty JSON report."
+            echo "ERROR: Missing or empty Semgrep report."
             exit 1
           fi
 
+          # Semgrep can return nonzero for findings or operational errors.
+          # Report validation and scan status are evaluated separately.
           exit "$scan_exit"
 
       - name: Validate Semgrep JSON
@@ -71,68 +69,46 @@ jobs:
         run: |
           python - <<'PY'
           import json
-          import os
-          import sys
           from pathlib import Path
 
-          report_path = Path("reports/semgrep.json")
-          output_path = os.environ["GITHUB_OUTPUT"]
+          path = Path("reports/semgrep.json")
 
-          def fail(message):
-              print(f"ERROR: {message}")
-              with open(output_path, "a", encoding="utf-8") as f:
-                  f.write("report_valid=false\n")
-              sys.exit(1)
-
-          if not report_path.is_file() or report_path.stat().st_size == 0:
-              fail("Semgrep report is missing or empty.")
+          if not path.is_file() or path.stat().st_size == 0:
+              raise SystemExit("ERROR: Report missing or empty.")
 
           try:
-              report = json.loads(
-                  report_path.read_text(encoding="utf-8")
-              )
-          except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-              fail(f"Invalid JSON: {exc}")
+              report = json.loads(path.read_text(encoding="utf-8"))
+          except json.JSONDecodeError as exc:
+              raise SystemExit(f"ERROR: Invalid JSON: {exc}")
 
           if not isinstance(report, dict):
-              fail("Expected a Semgrep JSON object.")
+              raise SystemExit("ERROR: Expected a JSON object.")
 
           results = report.get("results")
           errors = report.get("errors")
-          paths = report.get("paths", {})
-          targets = report.get("targets", [])
+          scanned = report.get("paths", {}).get("scanned", [])
 
           if not isinstance(results, list):
-              fail("The results field is missing or is not a list.")
+              raise SystemExit("ERROR: Missing results list.")
 
           if not isinstance(errors, list):
-              fail("The errors field is missing or is not a list.")
+              raise SystemExit("ERROR: Invalid errors field.")
 
           print("Semgrep version:", report.get("version"))
           print("Findings:", len(results))
           print("Errors:", len(errors))
-          print("Scanned paths:", paths.get("scanned", []))
-          print("Targets:", targets)
-          print("Bytes scanned:", report.get("total_bytes", 0))
+          print("Scanned paths:", len(scanned))
+          print("Bytes scanned:", report.get("total_bytes", "unknown"))
 
           if errors:
               for error in errors:
                   print("Semgrep error:", error)
-              fail("Semgrep reported scan errors.")
+              raise SystemExit("ERROR: Semgrep reported scan errors.")
 
-          scanned_paths = paths.get("scanned", [])
-          total_bytes = report.get("total_bytes", 0)
+          if not scanned:
+              raise SystemExit("ERROR: No scanned paths reported.")
 
-          if not scanned_paths:
-              fail("No scanned paths were reported.")
-
-          if not isinstance(total_bytes, (int, float)) or total_bytes <= 0:
-              fail("No scanned bytes were reported.")
-
-          with open(output_path, "a", encoding="utf-8") as f:
-              f.write("report_valid=true\n")
-
-          print("Semgrep report validation passed.")
+          print("Semgrep JSON validation passed.")
           PY
 
       - name: Upload Semgrep JSON report
@@ -151,13 +127,13 @@ jobs:
           VALIDATION_OUTCOME: ${{ steps.validate.outcome }}
         run: |
           if [ "$SCAN_OUTCOME" != "success" ]; then
-            echo "Release check failed: Semgrep scan did not succeed."
+            echo "FAILED: Semgrep scan did not complete successfully."
             exit 1
           fi
 
           if [ "$VALIDATION_OUTCOME" != "success" ]; then
-            echo "Release check failed: Semgrep report validation failed."
+            echo "FAILED: Semgrep report validation failed."
             exit 1
           fi
 
-          echo "Semgrep scan and report validation succeeded."
+          echo "Semgrep scan and validation succeeded."

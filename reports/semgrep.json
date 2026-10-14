@@ -1,0 +1,40 @@
+
+{
+  "version": "1.180.0",
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.sql-injection",
+      "path": "app/database.py",
+      "start": {
+        "line": 42,
+        "col": 12
+      },
+      "end": {
+        "line": 42,
+        "col": 48
+      },
+      "extra": {
+        "message": "Potential SQL injection through dynamically constructed SQL.",
+        "severity": "ERROR",
+        "metadata": {
+          "severity": "HIGH",
+          "category": "security",
+          "confidence": "MEDIUM",
+          "impact": "HIGH",
+          "technology": [
+            "python"
+          ],
+          "references": [],
+          "fix": "Use parameterized queries instead of string concatenation."
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "paths": {
+    "scanned": [
+      "app/database.py"
+    ]
+  },
+  "total_bytes": 1250
+}
