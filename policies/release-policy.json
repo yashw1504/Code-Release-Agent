@@ -1,0 +1,18 @@
+
+{
+  "name": "Secure Code Release Policy",
+  "version": "1.0",
+  "block_severities": [
+    "CRITICAL"
+  ],
+  "review_severities": [
+    "HIGH"
+  ],
+  "unknown_severity_action": "REVIEW",
+  "fail_on_missing_required_scan": true,
+  "required_scanners": [
+    "semgrep",
+    "trivy",
+    "gitleaks"
+  ]
+}

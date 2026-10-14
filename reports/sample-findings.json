@@ -1,0 +1,21 @@
+
+[
+  {
+    "tool": "semgrep",
+    "severity": "HIGH",
+    "rule_id": "TEST-SQL-001",
+    "title": "Potential SQL injection",
+    "file": "app/database.py",
+    "description": "Synthetic demonstration finding.",
+    "remediation": "Use parameterized queries."
+  },
+  {
+    "tool": "trivy",
+    "severity": "CRITICAL",
+    "rule_id": "TEST-DEP-001",
+    "title": "Example vulnerable dependency",
+    "file": "requirements.txt",
+    "description": "Synthetic demonstration finding.",
+    "remediation": "Upgrade to a verified fixed version."
+  }
+]

@@ -1,0 +1,34 @@
+{
+  "risk_score": 17,
+  "decision": "BLOCK",
+  "finding_count": 2,
+  "severity_counts": {
+    "CRITICAL": 1,
+    "HIGH": 1,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "INFO": 0
+  },
+  "findings": [
+    {
+      "rule_id": "TEST-SQL-001",
+      "severity": "HIGH",
+      "title": "Potential SQL injection",
+      "tool": "semgrep",
+      "file": "app/database.py",
+      "description": "Synthetic demonstration finding.",
+      "remediation": "Use parameterized queries."
+    },
+    {
+      "rule_id": "TEST-DEP-001",
+      "severity": "CRITICAL",
+      "title": "Example vulnerable dependency",
+      "tool": "trivy",
+      "file": "requirements.txt",
+      "description": "Synthetic demonstration finding.",
+      "remediation": "Upgrade to a verified fixed version."
+    }
+  ],
+  "agent": "Secure Code Release Agent",
+  "source_file": "sample-findings.json"
+}
