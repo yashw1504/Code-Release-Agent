@@ -111,14 +111,32 @@ jobs:
           print("Semgrep JSON validation passed.")
           PY
 
-      - name: Upload Semgrep JSON report
+    
+      - name: Generate JSON and HTML release reports
+        id: release_report
+        if: steps.semgrep.outcome == 'success' && steps.validate.outcome == 'success'
+        run: |
+          python -m engine.agent reports/semgrep.json
+
+          test -s reports/release-report.json
+          test -s reports/release-report.html
+
+          echo "Both release reports generated successfully."
+
+
+      
+      - name: Upload Security Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-security-report
-          path: reports/semgrep.json
+          name: secure-release-reports
+          path: |
+            reports/semgrep.json
+            reports/release-report.json
+            reports/release-report.html
           if-no-files-found: warn
           retention-days: 7
+
 
       - name: Enforce scan success
         if: always()
@@ -137,3 +155,6 @@ jobs:
           fi
 
           echo "Semgrep scan and validation succeeded."
+
+
+          
