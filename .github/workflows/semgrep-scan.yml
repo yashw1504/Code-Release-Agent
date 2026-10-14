@@ -1,4 +1,3 @@
-
 name: Semgrep Security Scan
 
 on: [push, pull_request, workflow_dispatch]
@@ -34,6 +33,39 @@ jobs:
             --output reports/semgrep.json \
             .
 
+      - name: Generate HTML Report
+        if: always()
+        run: |
+          cat > reports/release-report.html << 'EOF'
+          <html>
+          <head>
+            <title>Semgrep Report</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+              }
+              pre {
+                background: #f5f5f5;
+                padding: 10px;
+                border-radius: 5px;
+                overflow-x: auto;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Semgrep Security Report</h1>
+            <pre>
+          EOF
+
+          cat reports/semgrep.json >> reports/release-report.html
+
+          cat >> reports/release-report.html << 'EOF'
+            </pre>
+          </body>
+          </html>
+          EOF
+
       - name: Validate JSON report
         if: always()
         run: |
@@ -45,11 +77,12 @@ jobs:
             exit 1
           fi
 
-      - name: Upload Semgrep report
+      - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-security-report
-          path: reports/semgrep.json
-          if-no-files-found: error
+          path: |
+            reports/semgrep.json
+            reports/release-report.html
           retention-days: 7
