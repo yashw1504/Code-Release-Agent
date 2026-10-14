@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secure Code Release Agent - Security Report</title>
+<style>
+:root {
+  color-scheme: light;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  color: #172033;
+  background: #f3f5f9;
+}
+* { box-sizing: border-box; }
+body { margin: 0; line-height: 1.55; }
+header { background: #172033; color: white; padding: 28px 20px; }
+.container { max-width: 1080px; margin: auto; }
+header h1 { margin: 0 0 5px; font-size: 26px; }
+header p { color: #cbd5e1; margin: 0; }
+main { padding: 24px 20px 40px; }
+.topline { display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.decision { display: inline-block; padding: 7px 13px; border-radius: 8px;
+  font-weight: 800; font-size: 13px; }
+.block { color: #991b1b; background: #fee2e2; }
+.pass { color: #166534; background: #dcfce7; }
+.review { color: #92400e; background: #fef3c7; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px; margin-bottom: 28px; }
+.card, .finding, .empty-state { background: white; border: 1px solid #e2e8f0;
+  border-radius: 12px; padding: 18px; }
+.card .label { color: #64748b; font-size: 13px; }
+.card .value { font-size: 29px; font-weight: 750; margin-top: 5px; }
+h2 { font-size: 20px; margin: 26px 0 14px; }
+.finding { margin-bottom: 14px; }
+.finding-header { display: flex; justify-content: space-between; gap: 12px;
+  align-items: center; flex-wrap: wrap; }
+.severity { font-size: 12px; font-weight: 800; padding: 4px 9px;
+  border-radius: 6px; }
+.critical { background: #7f1d1d; color: white; }
+.high { background: #fee2e2; color: #991b1b; }
+.medium { background: #ffedd5; color: #9a3412; }
+.low { background: #fef9c3; color: #854d0e; }
+.info { background: #e0f2fe; color: #075985; }
+.finding-number { font-size: 12px; color: #64748b; }
+.finding h3 { margin: 12px 0; font-size: 17px; }
+dl { display: grid; grid-template-columns: 150px minmax(0, 1fr);
+  gap: 8px 14px; margin: 0; overflow-wrap: anywhere; }
+dt { color: #64748b; font-size: 13px; }
+dd { margin: 0; white-space: pre-wrap; }
+.empty-state { text-align: center; padding: 32px; }
+footer { color: #64748b; font-size: 12px; margin-top: 25px; }
+@media (max-width: 640px) {
+  .cards { grid-template-columns: 1fr; }
+  dl { grid-template-columns: 1fr; gap: 3px; }
+  dd { margin-bottom: 9px; }
+}
+@media print {
+  :root { background: white; }
+  header { background: #172033 !important; print-color-adjust: exact; }
+  main { padding: 10px 0; }
+  .finding, .card { break-inside: avoid; }
+  .finding { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1>Secure Code Release Agent</h1>
+    <p>Security Assessment &amp; Release Gate Report</p>
+  </div>
+</header>
+<main class="container">
+  <div class="topline">
+    <div>
+      <strong>Release assessment</strong><br>
+      <span>Generated: 2026-10-14 09:55:54 UTC</span>
+    </div>
+    <span class="decision block">BLOCK</span>
+  </div>
+
+  <section class="cards" aria-label="Report summary">
+    <div class="card">
+      <div class="label">Risk score</div>
+      <div class="value">17</div>
+    </div>
+    <div class="card">
+      <div class="label">Total findings</div>
+      <div class="value">2</div>
+    </div>
+    <div class="card">
+      <div class="label">Critical / High</div>
+      <div class="value">1 / 1</div>
+    </div>
+  </section>
+
+  <h2>Severity breakdown</h2>
+  <section class="cards" aria-label="Severity breakdown">
+    <div class="card"><div class="label">Critical</div>
+      <div class="value">1</div></div>
+    <div class="card"><div class="label">High / Medium</div>
+      <div class="value">1 / 0</div></div>
+    <div class="card"><div class="label">Low / Info</div>
+      <div class="value">0 / 0</div></div>
+  </section>
+
+  <h2>Security findings</h2>
+  
+    <article class="finding">
+      <div class="finding-header">
+        <span class="severity high">HIGH</span>
+        <span class="finding-number">Finding #1</span>
+      </div>
+      <h3>Potential SQL injection</h3>
+      <dl>
+        <dt>Rule ID</dt><dd>TEST-SQL-001</dd>
+        <dt>Location</dt><dd>N/A:N/A</dd>
+        <dt>Description</dt><dd>Synthetic demonstration finding.</dd>
+        <dt>Business impact</dt><dd>Not specified.</dd>
+        <dt>Remediation</dt><dd>Use parameterized queries.</dd>
+      </dl>
+    </article>
+    
+
+    <article class="finding">
+      <div class="finding-header">
+        <span class="severity critical">CRITICAL</span>
+        <span class="finding-number">Finding #2</span>
+      </div>
+      <h3>Example vulnerable dependency</h3>
+      <dl>
+        <dt>Rule ID</dt><dd>TEST-DEP-001</dd>
+        <dt>Location</dt><dd>N/A:N/A</dd>
+        <dt>Description</dt><dd>Synthetic demonstration finding.</dd>
+        <dt>Business impact</dt><dd>Not specified.</dd>
+        <dt>Remediation</dt><dd>Upgrade to a verified fixed version.</dd>
+      </dl>
+    </article>
+    
+
+  <footer>
+    Generated by Secure Code Release Agent. Review findings and scan errors
+    before making a release decision. A clean result is not proof that code
+    is free of vulnerabilities.
+  </footer>
+</main>
+</body>
+</html>

@@ -1,18 +1,29 @@
+
 name: Semgrep Security Scan
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   semgrep:
-    name: Run Semgrep
+    name: Scan and Validate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -22,67 +33,131 @@ jobs:
       - name: Install Semgrep
         run: python -m pip install semgrep
 
+      - name: Display Semgrep version
+        run: semgrep --version
+
       - name: Create reports directory
         run: mkdir -p reports
 
       - name: Run Semgrep scan
+        id: semgrep
+        continue-on-error: true
         run: |
+          set +e
+
           semgrep scan \
             --config p/security-audit \
+            --include '*.py' \
+            --no-git-ignore \
+            --verbose \
             --json \
             --output reports/semgrep.json \
             .
+          
+          scan_exit=$?
+          echo "scan_exit_code=$scan_exit" >> "$GITHUB_OUTPUT"
 
-      - name: Generate HTML Report
-        if: always()
-        run: |
-          cat > reports/release-report.html << 'EOF'
-          <html>
-          <head>
-            <title>Semgrep Report</title>
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                margin: 20px;
-              }
-              pre {
-                background: #f5f5f5;
-                padding: 10px;
-                border-radius: 5px;
-                overflow-x: auto;
-              }
-            </style>
-          </head>
-          <body>
-            <h1>Semgrep Security Report</h1>
-            <pre>
-          EOF
-
-          cat reports/semgrep.json >> reports/release-report.html
-
-          cat >> reports/release-report.html << 'EOF'
-            </pre>
-          </body>
-          </html>
-          EOF
-
-      - name: Validate JSON report
-        if: always()
-        run: |
-          if [ -f reports/semgrep.json ]; then
-            python -m json.tool reports/semgrep.json > /dev/null
-            echo "Semgrep JSON report is valid."
-          else
-            echo "Semgrep report was not generated."
+          if [ ! -s reports/semgrep.json ]; then
+            echo "ERROR: Semgrep did not generate a non-empty JSON report."
             exit 1
           fi
 
-      - name: Upload Reports
+          exit "$scan_exit"
+
+      - name: Validate Semgrep JSON
+        id: validate
+        if: always()
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          report_path = Path("reports/semgrep.json")
+          output_path = os.environ["GITHUB_OUTPUT"]
+
+          def fail(message):
+              print(f"ERROR: {message}")
+              with open(output_path, "a", encoding="utf-8") as f:
+                  f.write("report_valid=false\n")
+              sys.exit(1)
+
+          if not report_path.is_file() or report_path.stat().st_size == 0:
+              fail("Semgrep report is missing or empty.")
+
+          try:
+              report = json.loads(
+                  report_path.read_text(encoding="utf-8")
+              )
+          except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+              fail(f"Invalid JSON: {exc}")
+
+          if not isinstance(report, dict):
+              fail("Expected a Semgrep JSON object.")
+
+          results = report.get("results")
+          errors = report.get("errors")
+          paths = report.get("paths", {})
+          targets = report.get("targets", [])
+
+          if not isinstance(results, list):
+              fail("The results field is missing or is not a list.")
+
+          if not isinstance(errors, list):
+              fail("The errors field is missing or is not a list.")
+
+          print("Semgrep version:", report.get("version"))
+          print("Findings:", len(results))
+          print("Errors:", len(errors))
+          print("Scanned paths:", paths.get("scanned", []))
+          print("Targets:", targets)
+          print("Bytes scanned:", report.get("total_bytes", 0))
+
+          if errors:
+              for error in errors:
+                  print("Semgrep error:", error)
+              fail("Semgrep reported scan errors.")
+
+          scanned_paths = paths.get("scanned", [])
+          total_bytes = report.get("total_bytes", 0)
+
+          if not scanned_paths:
+              fail("No scanned paths were reported.")
+
+          if not isinstance(total_bytes, (int, float)) or total_bytes <= 0:
+              fail("No scanned bytes were reported.")
+
+          with open(output_path, "a", encoding="utf-8") as f:
+              f.write("report_valid=true\n")
+
+          print("Semgrep report validation passed.")
+          PY
+
+      - name: Upload Semgrep JSON report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-security-report
-          path: |
-            reports/semgrep.json
-            reports/release-report.html
+          path: reports/semgrep.json
+          if-no-files-found: warn
           retention-days: 7
+
+      - name: Enforce scan success
+        if: always()
+        env:
+          SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
+          VALIDATION_OUTCOME: ${{ steps.validate.outcome }}
+        run: |
+          if [ "$SCAN_OUTCOME" != "success" ]; then
+            echo "Release check failed: Semgrep scan did not succeed."
+            exit 1
+          fi
+
+          if [ "$VALIDATION_OUTCOME" != "success" ]; then
+            echo "Release check failed: Semgrep report validation failed."
+            exit 1
+          fi
+
+          echo "Semgrep scan and report validation succeeded."
