@@ -123,6 +123,13 @@ jobs:
 
           echo "Both release reports generated successfully."
 
+            
+      - name: Evaluate release gate
+        id: gate
+        if: steps.release_report.outcome == 'success'
+        continue-on-error: true
+        run: |
+          python -m engine.gate
 
       
       - name: Upload Security Reports
@@ -138,11 +145,14 @@ jobs:
           retention-days: 7
 
 
-      - name: Enforce scan success
+      
+      - name: Enforce scan and release policy
         if: always()
         env:
           SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
           VALIDATION_OUTCOME: ${{ steps.validate.outcome }}
+          REPORT_OUTCOME: ${{ steps.release_report.outcome }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
         run: |
           if [ "$SCAN_OUTCOME" != "success" ]; then
             echo "FAILED: Semgrep scan did not complete successfully."
@@ -154,7 +164,17 @@ jobs:
             exit 1
           fi
 
-          echo "Semgrep scan and validation succeeded."
+          if [ "$REPORT_OUTCOME" != "success" ]; then
+            echo "FAILED: Release reports could not be generated."
+            exit 1
+          fi
+
+          if [ "$GATE_OUTCOME" != "success" ]; then
+            echo "FAILED: Release gate blocked or rejected the release."
+            exit 1
+          fi
+
+          echo "PASS: Scan, report generation, and release gate succeeded."
 
 
           
