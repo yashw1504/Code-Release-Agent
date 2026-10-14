@@ -37,11 +37,15 @@ jobs:
       - name: Create reports directory
         run: mkdir -p reports
 
+      # --------------------------------------------------
+      # 1. Run Semgrep
+      # --------------------------------------------------
       - name: Run Semgrep scan
         id: semgrep
         continue-on-error: true
         run: |
           set +e
+
           semgrep scan \
             --config p/security-audit \
             --include '*.py' \
@@ -50,18 +54,20 @@ jobs:
             --json \
             --output reports/semgrep.json \
             .
+
           scan_exit=$?
           echo "scan_exit_code=$scan_exit" >> "$GITHUB_OUTPUT"
 
           if [ ! -s reports/semgrep.json ]; then
-            echo "ERROR: Missing or empty Semgrep report."
+            echo "ERROR: Semgrep report is missing or empty."
             exit 1
           fi
 
-          # Semgrep can return nonzero for findings or operational errors.
-          # Report validation and scan status are evaluated separately.
           exit "$scan_exit"
 
+      # --------------------------------------------------
+      # 2. Validate Semgrep JSON
+      # --------------------------------------------------
       - name: Validate Semgrep JSON
         id: validate
         if: always()
@@ -103,7 +109,7 @@ jobs:
           if errors:
               for error in errors:
                   print("Semgrep error:", error)
-              raise SystemExit("ERROR: Semgrep reported scan errors.")
+              raise SystemExit("ERROR: Semgrep reported scanner errors.")
 
           if not scanned:
               raise SystemExit("ERROR: No scanned paths reported.")
@@ -111,27 +117,45 @@ jobs:
           print("Semgrep JSON validation passed.")
           PY
 
-    
-      - name: Generate JSON and HTML release reports
-        id: release_report
+      # --------------------------------------------------
+      # 3. Generate human-readable Semgrep HTML report
+      # --------------------------------------------------
+      - name: Generate Semgrep HTML report
+        id: semgrep_html
         if: steps.semgrep.outcome == 'success' && steps.validate.outcome == 'success'
+        run: |
+          python scripts/semgrep_to_html.py
+          test -s reports/semgrep.html
+
+          echo "Semgrep HTML report generated."
+
+      # --------------------------------------------------
+      # 4. Generate agent JSON and HTML reports
+      # --------------------------------------------------
+      - name: Generate Release Reports
+        id: release_report
+        if: steps.semgrep_html.outcome == 'success'
         run: |
           python -m engine.agent reports/semgrep.json
 
           test -s reports/release-report.json
           test -s reports/release-report.html
 
-          echo "Both release reports generated successfully."
+          echo "Release JSON and HTML reports generated."
 
-            
-      - name: Evaluate release gate
+      # --------------------------------------------------
+      # 5. Evaluate release gate
+      # --------------------------------------------------
+      - name: Evaluate Release Gate
         id: gate
         if: steps.release_report.outcome == 'success'
         continue-on-error: true
         run: |
           python -m engine.gate
 
-      
+      # --------------------------------------------------
+      # 6. Upload reports even when the gate blocks release
+      # --------------------------------------------------
       - name: Upload Security Reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -139,18 +163,21 @@ jobs:
           name: secure-release-reports
           path: |
             reports/semgrep.json
+            reports/semgrep.html
             reports/release-report.json
             reports/release-report.html
           if-no-files-found: warn
           retention-days: 7
 
-
-      
-      - name: Enforce scan and release policy
+      # --------------------------------------------------
+      # 7. Enforce final pipeline result
+      # --------------------------------------------------
+      - name: Enforce Scan and Release Policy
         if: always()
         env:
           SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
           VALIDATION_OUTCOME: ${{ steps.validate.outcome }}
+          SEMGREP_HTML_OUTCOME: ${{ steps.semgrep_html.outcome }}
           REPORT_OUTCOME: ${{ steps.release_report.outcome }}
           GATE_OUTCOME: ${{ steps.gate.outcome }}
         run: |
@@ -160,12 +187,17 @@ jobs:
           fi
 
           if [ "$VALIDATION_OUTCOME" != "success" ]; then
-            echo "FAILED: Semgrep report validation failed."
+            echo "FAILED: Semgrep JSON validation failed."
+            exit 1
+          fi
+
+          if [ "$SEMGREP_HTML_OUTCOME" != "success" ]; then
+            echo "FAILED: Semgrep HTML report generation failed."
             exit 1
           fi
 
           if [ "$REPORT_OUTCOME" != "success" ]; then
-            echo "FAILED: Release reports could not be generated."
+            echo "FAILED: Release report generation failed."
             exit 1
           fi
 
@@ -174,7 +206,4 @@ jobs:
             exit 1
           fi
 
-          echo "PASS: Scan, report generation, and release gate succeeded."
-
-
-          
+          echo "PASS: Scan, reports, and release gate succeeded."
