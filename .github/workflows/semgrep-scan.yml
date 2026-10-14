@@ -1,0 +1,55 @@
+
+name: Semgrep Security Scan
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: Run Semgrep
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Semgrep
+        run: python -m pip install semgrep
+
+      - name: Create reports directory
+        run: mkdir -p reports
+
+      - name: Run Semgrep scan
+        run: |
+          semgrep scan \
+            --config p/security-audit \
+            --json \
+            --output reports/semgrep.json \
+            .
+
+      - name: Validate JSON report
+        if: always()
+        run: |
+          if [ -f reports/semgrep.json ]; then
+            python -m json.tool reports/semgrep.json > /dev/null
+            echo "Semgrep JSON report is valid."
+          else
+            echo "Semgrep report was not generated."
+            exit 1
+          fi
+
+      - name: Upload Semgrep report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-security-report
+          path: reports/semgrep.json
+          if-no-files-found: error
+          retention-days: 7
