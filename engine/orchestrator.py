@@ -8,7 +8,17 @@ def run_scans(target: str | Path, reports_dir: str | Path, enabled: tuple[str, .
     target, reports = Path(target).resolve(), Path(reports_dir).resolve()
     reports.mkdir(parents=True, exist_ok=True)
     results: list[ScanResult] = []
-    if "semgrep" in enabled: results.append(SemgrepAdapter().scan(target, reports / "semgrep.json"))
-    if "trivy" in enabled: results.append(TrivyAdapter().filesystem_scan(target, reports / "trivy-filesystem.json"))
-    if "gitleaks" in enabled: results.append(GitleaksAdapter().scan(target, reports / "gitleaks.json"))
+
+    def execute(scanner: str, operation):
+        try:
+            results.append(operation())
+        except Exception as exc:  # A scanner bug must never hide as a clean scan.
+            results.append(ScanResult(scanner=scanner, status="FAILED", error=f"Adapter error: {type(exc).__name__}: {exc}", scope=str(target)))
+
+    if "semgrep" in enabled:
+        execute("semgrep", lambda: SemgrepAdapter().scan(target, reports / "semgrep.json"))
+    if "trivy" in enabled:
+        execute("trivy", lambda: TrivyAdapter().filesystem_scan(target, reports / "trivy-filesystem.json"))
+    if "gitleaks" in enabled:
+        execute("gitleaks", lambda: GitleaksAdapter().scan(target, reports / "gitleaks.json"))
     return results

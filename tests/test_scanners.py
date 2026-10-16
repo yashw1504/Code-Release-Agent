@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from engine.scanners import GitleaksAdapter, SemgrepAdapter, TrivyAdapter
+from engine import orchestrator
 
 
 class AdapterParsingTests(unittest.TestCase):
@@ -21,6 +22,17 @@ class AdapterParsingTests(unittest.TestCase):
         raw = [{"RuleID": "generic-api-key", "Description": "secret", "File": "x.env", "StartLine": 1}]
         result = GitleaksAdapter().parse(raw, Path("out.json"), 1, 0.1, ".", "")
         self.assertEqual(result.findings[0].evidence, "[REDACTED]")
+
+    def test_orchestrator_records_adapter_exception(self):
+        with TemporaryDirectory() as directory:
+            original = SemgrepAdapter.scan
+            SemgrepAdapter.scan = lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("broken parser"))
+            try:
+                results = orchestrator.run_scans(directory, Path(directory) / "reports", enabled=("semgrep",))
+            finally:
+                SemgrepAdapter.scan = original
+        self.assertEqual(results[0].status, "FAILED")
+        self.assertIn("Adapter error", results[0].error)
 
 
 if __name__ == "__main__":
