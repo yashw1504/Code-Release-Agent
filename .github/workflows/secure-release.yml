@@ -95,6 +95,55 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Notify Slack of release decision
+        # Configure repository secret SLACK_WEBHOOK_URL to enable this step.
+        # A notification failure must not override the deterministic release gate.
+        if: always() && secrets.SLACK_WEBHOOK_URL != ''
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY' > "$RUNNER_TEMP/slack-payload.json"
+          import json
+          import os
+          from pathlib import Path
+
+          report_path = Path("reports/release-report.json")
+          report = {}
+          try:
+              report = json.loads(report_path.read_text(encoding="utf-8"))
+          except (OSError, json.JSONDecodeError):
+              pass
+
+          decision = report.get("decision", "SCAN FAILED")
+          risk = report.get("risk_score", "N/A")
+          count = report.get("finding_count", len(report.get("findings", [])))
+          violations = report.get("violations", [])
+          reasons = "; ".join(item.get("message", "policy violation") for item in violations if isinstance(item, dict)) or "No report was generated."
+          payload = {
+              "text": f"Secure Release Gate: {decision} for {os.environ['REPOSITORY']}",
+              "blocks": [
+                  {"type": "header", "text": {"type": "plain_text", "text": f"Secure Release Gate: {decision}"}},
+                  {"type": "section", "fields": [
+                      {"type": "mrkdwn", "text": f"*Repository*\n{os.environ['REPOSITORY']}"},
+                      {"type": "mrkdwn", "text": f"*Commit*\n{os.environ['COMMIT_SHA'][:12]}"},
+                      {"type": "mrkdwn", "text": f"*Risk score*\n{risk}"},
+                      {"type": "mrkdwn", "text": f"*Findings*\n{count}"},
+                  ]},
+                  {"type": "section", "text": {"type": "mrkdwn", "text": f"*Reason*\n{reasons[:2500]}"}},
+                  {"type": "section", "text": {"type": "mrkdwn", "text": f"<{os.environ['RUN_URL']}|Open workflow run and download reports>"}},
+              ],
+          }
+          print(json.dumps(payload))
+          PY
+          curl --fail --silent --show-error --request POST \
+            --header "Content-Type: application/json" \
+            --data-binary @"$RUNNER_TEMP/slack-payload.json" \
+            "$SLACK_WEBHOOK_URL"
+
       - name: Enforce release policy
         if: always()
         run: |
