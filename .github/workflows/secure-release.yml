@@ -14,6 +14,9 @@ jobs:
   security-release:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    env:
+      # Kept in GitHub Actions secrets; never commit the webhook URL.
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - name: Checkout complete repository history
         uses: actions/checkout@v4
@@ -98,10 +101,9 @@ jobs:
       - name: Notify Slack of release decision
         # Configure repository secret SLACK_WEBHOOK_URL to enable this step.
         # A notification failure must not override the deterministic release gate.
-        if: always() && secrets.SLACK_WEBHOOK_URL != ''
+        if: always() && env.SLACK_WEBHOOK_URL != ''
         continue-on-error: true
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           REPOSITORY: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           COMMIT_SHA: ${{ github.sha }}
