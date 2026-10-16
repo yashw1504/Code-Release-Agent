@@ -25,6 +25,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Prepare fresh report directory
+        run: |
+          rm -rf reports
+          mkdir -p reports
+
       - name: Install Semgrep
         run: |
           python -m pip install --upgrade pip
@@ -48,7 +53,8 @@ jobs:
       # upstream archive directly so the workflow has no nested-action setup.
       - name: Install Trivy
         env:
-          TRIVY_VERSION: "0.68.2"
+          # v0.68.2 has been removed from the upstream release assets.
+          TRIVY_VERSION: "0.75.0"
         run: |
           curl --fail --location --silent --show-error \
             "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
