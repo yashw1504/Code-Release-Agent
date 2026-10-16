@@ -74,10 +74,20 @@ class TrivyAdapter(BaseAdapter):
         return self._run_json([self.executable, "fs", "--format", "json", "--output", str(output), "--scanners", scan_type, str(target)], output, str(target))
 
     def parse(self, raw: Any, output: Path, exit_code: int, duration: float, scope: str, stderr: str) -> ScanResult:
-        if not isinstance(raw, dict) or not isinstance(raw.get("Results", []), list):
+        if not isinstance(raw, dict):
             return ScanResult(self.name, "FAILED", raw_output=str(output), duration_seconds=duration, error="Unexpected Trivy JSON schema", scope=scope)
+        results = raw.get("Results")
+        # Trivy may omit Results entirely for a valid filesystem scan with no
+        # supported targets/findings. Its report metadata still establishes the
+        # format; never index the optional key directly.
+        if results is None:
+            if "Results" not in raw and ("SchemaVersion" in raw or "ArtifactName" in raw):
+                return ScanResult(self.name, "SUCCESS", raw_output=str(output), duration_seconds=duration, version=raw.get("Metadata", {}).get("Version"), scope=scope)
+            return ScanResult(self.name, "FAILED", raw_output=str(output), duration_seconds=duration, error="Trivy JSON is missing Results", scope=scope)
+        if not isinstance(results, list):
+            return ScanResult(self.name, "FAILED", raw_output=str(output), duration_seconds=duration, error="Trivy Results must be a list", scope=scope)
         findings = []
-        for result in raw["Results"]:
+        for result in results:
             if not isinstance(result, dict): continue
             target = result.get("Target")
             for vuln in result.get("Vulnerabilities") or []:

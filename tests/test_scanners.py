@@ -18,6 +18,12 @@ class AdapterParsingTests(unittest.TestCase):
         result = TrivyAdapter().parse(raw, Path("out.json"), 0, 0.1, ".", "")
         self.assertEqual(result.findings[0].fixed_version, "2")
 
+    def test_trivy_empty_report_is_successful(self):
+        raw = {"SchemaVersion": 2, "ArtifactName": ".", "ArtifactType": "filesystem"}
+        result = TrivyAdapter().parse(raw, Path("out.json"), 0, 0.1, ".", "")
+        self.assertEqual(result.status, "SUCCESS")
+        self.assertEqual(result.findings, [])
+
     def test_gitleaks_redacts_evidence(self):
         raw = [{"RuleID": "generic-api-key", "Description": "secret", "File": "x.env", "StartLine": 1}]
         result = GitleaksAdapter().parse(raw, Path("out.json"), 1, 0.1, ".", "")
