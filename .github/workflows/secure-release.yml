@@ -25,12 +25,24 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Semgrep and Gitleaks
+      - name: Install Semgrep
         run: |
           python -m pip install --upgrade pip
           python -m pip install semgrep
-          go install github.com/gitleaks/gitleaks/v8@v8.24.2
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # Use the upstream release archive rather than assuming Go is present or
+      # that its GOPATH will be persisted between workflow steps.
+      - name: Install Gitleaks
+        env:
+          GITLEAKS_VERSION: "8.24.2"
+        run: |
+          curl --fail --location --silent --show-error \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            --output /tmp/gitleaks.tar.gz
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          tar -xzf /tmp/gitleaks.tar.gz -C "$RUNNER_TEMP/gitleaks" gitleaks
+          chmod +x "$RUNNER_TEMP/gitleaks/gitleaks"
+          echo "$RUNNER_TEMP/gitleaks" >> "$GITHUB_PATH"
 
       - name: Install Trivy
         uses: aquasecurity/setup-trivy@e07451d2e059ed86c2870430ea286b3a9e0bf241
@@ -40,6 +52,9 @@ jobs:
 
       - name: Display scanner versions
         run: |
+          command -v semgrep
+          command -v trivy
+          command -v gitleaks
           semgrep --version
           trivy --version
           gitleaks version
