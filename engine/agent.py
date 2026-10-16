@@ -2,21 +2,19 @@
 import json
 from pathlib import Path
 
-from engine.normalizer import normalize_finding
+from engine.normalizer import normalize_finding, normalize_semgrep_report
 from engine.risk_engine import evaluate
 from engine.report import save_report
 from engine.html_report import generate_html_report
-from engine.normalizer import (
-    normalize_finding,
-    normalize_semgrep_report,
-)
+from engine.gate import evaluate_policy, load_policy
+from engine.orchestrator import run_scans
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT = PROJECT_ROOT / "reports" / "sample-findings.json"
 
 
-def run_agent(input_file: str) -> dict:
+def run_agent(input_file: str, policy_file=None, scans=None) -> dict:
     path = Path(input_file)
 
     # Resolve relative paths from the project root.
@@ -44,7 +42,10 @@ def run_agent(input_file: str) -> dict:
             "Input must be a findings list or a Semgrep JSON report"
         )
 
-    result = evaluate(findings)
+    risk = evaluate(findings)
+    scans = scans or [{"scanner": "semgrep", "status": "SUCCESS", "raw_output": str(path)}]
+    policy_result = evaluate_policy(risk, scans, load_policy(policy_file) if policy_file else load_policy())
+    result = {"schema_version": "1.0", "risk": risk, "scans": scans, **policy_result, **risk}
     result["agent"] = "Secure Code Release Agent"
     result["source_file"] = path.name
 
@@ -53,10 +54,22 @@ def run_agent(input_file: str) -> dict:
 
 if __name__ == "__main__":
     import sys
+    import argparse
 
-    input_file = sys.argv[1] if len(sys.argv) > 1 else str(DEFAULT_INPUT)
-
-    result = run_agent(input_file)
+    parser = argparse.ArgumentParser(description="Evaluate security findings or run enabled scanners.")
+    parser.add_argument("input", nargs="?", help="Semgrep JSON or a list of normalized findings")
+    parser.add_argument("--scan", action="store_true", help="Run Semgrep, Trivy, and Gitleaks against --target")
+    parser.add_argument("--target", default=".")
+    arguments = parser.parse_args()
+    if arguments.scan:
+        scan_results = run_scans(PROJECT_ROOT / arguments.target, PROJECT_ROOT / "reports")
+        scans = [item.to_dict() for item in scan_results]
+        findings = [finding for item in scan_results for finding in item.findings]
+        risk = evaluate(findings)
+        result = {"schema_version": "1.0", "agent": "Secure Code Release Agent", "scans": scans, "risk": risk, **risk, **evaluate_policy(risk, scans, load_policy())}
+    else:
+        input_file = arguments.input or str(DEFAULT_INPUT)
+        result = run_agent(input_file)
     report_path = save_report(result)
     html_path = generate_html_report(result)
 

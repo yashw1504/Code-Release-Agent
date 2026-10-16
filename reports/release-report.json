@@ -1,25 +1,133 @@
 {
-  "risk_score": 7,
-  "decision": "REVIEW",
-  "finding_count": 1,
+  "schema_version": "1.0",
+  "risk": {
+    "formula": "sum of severity weights over unique fingerprints, capped at 100 (critical=10, high=7, medium=4, low=1)",
+    "risk_score": 17,
+    "finding_count": 2,
+    "severity_counts": {
+      "CRITICAL": 1,
+      "HIGH": 1,
+      "MEDIUM": 0,
+      "LOW": 0,
+      "INFO": 0,
+      "UNKNOWN": 0
+    },
+    "findings": [
+      {
+        "rule_id": "TEST-SQL-001",
+        "severity": "HIGH",
+        "title": "Potential SQL injection",
+        "scanner": "semgrep",
+        "path": "app/database.py",
+        "start_line": null,
+        "end_line": null,
+        "description": "Synthetic demonstration finding.",
+        "remediation": "Use parameterized queries.",
+        "package_name": null,
+        "installed_version": null,
+        "fixed_version": null,
+        "identifiers": [],
+        "confidence": null,
+        "evidence": null,
+        "metadata": {},
+        "fingerprint": "df28d75b8d5b16a1cd859019423557cef311faa9b2bb05f82251f94d28d8ed53"
+      },
+      {
+        "rule_id": "TEST-DEP-001",
+        "severity": "CRITICAL",
+        "title": "Example vulnerable dependency",
+        "scanner": "trivy",
+        "path": "requirements.txt",
+        "start_line": null,
+        "end_line": null,
+        "description": "Synthetic demonstration finding.",
+        "remediation": "Upgrade to a verified fixed version.",
+        "package_name": null,
+        "installed_version": null,
+        "fixed_version": null,
+        "identifiers": [],
+        "confidence": null,
+        "evidence": null,
+        "metadata": {},
+        "fingerprint": "c63d732a937e38744a3db3cca89e60f6af0ca52648e63c4e19f8cf76e8bd918b"
+      }
+    ]
+  },
+  "scans": [
+    {
+      "scanner": "semgrep",
+      "status": "SUCCESS",
+      "raw_output": "D:\\POC\\Code Release Agent\\reports\\sample-findings.json"
+    }
+  ],
+  "decision": "BLOCK",
+  "policy_name": "Secure Code Release Policy",
+  "policy_version": "1.0",
+  "violations": [
+    {
+      "rule": "required_scanner",
+      "message": "Required scanner trivy did not succeed"
+    },
+    {
+      "rule": "required_scanner",
+      "message": "Required scanner gitleaks did not succeed"
+    },
+    {
+      "rule": "block_severity",
+      "message": "CRITICAL findings are blocked"
+    }
+  ],
+  "formula": "sum of severity weights over unique fingerprints, capped at 100 (critical=10, high=7, medium=4, low=1)",
+  "risk_score": 17,
+  "finding_count": 2,
   "severity_counts": {
-    "CRITICAL": 0,
+    "CRITICAL": 1,
     "HIGH": 1,
     "MEDIUM": 0,
     "LOW": 0,
-    "INFO": 0
+    "INFO": 0,
+    "UNKNOWN": 0
   },
   "findings": [
     {
-      "rule_id": "python.lang.security.audit.sql-injection",
+      "rule_id": "TEST-SQL-001",
       "severity": "HIGH",
-      "title": "Potential SQL injection through dynamically constructed SQL.",
-      "tool": "semgrep",
-      "file": "app/database.py:42",
-      "description": "Potential SQL injection through dynamically constructed SQL.",
-      "remediation": "Use parameterized queries instead of string concatenation."
+      "title": "Potential SQL injection",
+      "scanner": "semgrep",
+      "path": "app/database.py",
+      "start_line": null,
+      "end_line": null,
+      "description": "Synthetic demonstration finding.",
+      "remediation": "Use parameterized queries.",
+      "package_name": null,
+      "installed_version": null,
+      "fixed_version": null,
+      "identifiers": [],
+      "confidence": null,
+      "evidence": null,
+      "metadata": {},
+      "fingerprint": "df28d75b8d5b16a1cd859019423557cef311faa9b2bb05f82251f94d28d8ed53"
+    },
+    {
+      "rule_id": "TEST-DEP-001",
+      "severity": "CRITICAL",
+      "title": "Example vulnerable dependency",
+      "scanner": "trivy",
+      "path": "requirements.txt",
+      "start_line": null,
+      "end_line": null,
+      "description": "Synthetic demonstration finding.",
+      "remediation": "Upgrade to a verified fixed version.",
+      "package_name": null,
+      "installed_version": null,
+      "fixed_version": null,
+      "identifiers": [],
+      "confidence": null,
+      "evidence": null,
+      "metadata": {},
+      "fingerprint": "c63d732a937e38744a3db3cca89e60f6af0ca52648e63c4e19f8cf76e8bd918b"
     }
   ],
   "agent": "Secure Code Release Agent",
-  "source_file": "semgrep.json"
+  "source_file": "sample-findings.json"
 }

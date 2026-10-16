@@ -5,6 +5,48 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORT_PATH = ROOT / "reports" / "release-report.json"
+DEFAULT_POLICY_PATH = ROOT / "policies" / "release-policy.json"
+
+
+def load_policy(path=DEFAULT_POLICY_PATH):
+    """Load and minimally validate the single source of release policy."""
+    try:
+        policy = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Cannot load policy: {exc}") from exc
+    required = {"block_severities", "review_severities", "required_scanners", "fail_on_missing_required_scan"}
+    if not isinstance(policy, dict) or not required.issubset(policy):
+        raise ValueError("Policy is missing required fields")
+    if not all(isinstance(policy[key], list) for key in ("block_severities", "review_severities", "required_scanners")):
+        raise ValueError("Policy scanner and severity fields must be lists")
+    if not isinstance(policy["fail_on_missing_required_scan"], bool):
+        raise ValueError("Policy fail_on_missing_required_scan must be boolean")
+    return policy
+
+
+def evaluate_policy(risk, scans, policy):
+    """Return PASS/REVIEW/BLOCK and the policy rules that determined it."""
+    violations = []
+    statuses = {str(item.get("scanner")): str(item.get("status")) for item in scans if isinstance(item, dict)}
+    if policy["fail_on_missing_required_scan"]:
+        for scanner in policy["required_scanners"]:
+            if statuses.get(scanner) != "SUCCESS":
+                violations.append({"rule": "required_scanner", "message": f"Required scanner {scanner} did not succeed"})
+    counts = risk.get("severity_counts", {})
+    for severity in policy["block_severities"]:
+        if counts.get(str(severity).upper(), 0):
+            violations.append({"rule": "block_severity", "message": f"{severity} findings are blocked"})
+    maximum = policy.get("max_risk_score")
+    if isinstance(maximum, (int, float)) and risk.get("risk_score", 0) > maximum:
+        violations.append({"rule": "max_risk_score", "message": f"Risk score exceeds {maximum}"})
+    if violations:
+        decision = "BLOCK"
+    elif any(counts.get(str(severity).upper(), 0) for severity in policy["review_severities"]) or counts.get("UNKNOWN", 0):
+        decision = "REVIEW"
+        violations.append({"rule": "review_severity", "message": "Findings require manual review"})
+    else:
+        decision = "PASS"
+    return {"decision": decision, "policy_name": policy.get("name"), "policy_version": policy.get("version"), "violations": violations}
 
 
 def load_report():

@@ -37,12 +37,15 @@ def _render_finding(finding, index):
     file_path = (
         finding.get("file_path")
         or finding.get("path")
+        or finding.get("file")
         or finding.get("location")
         or "N/A"
     )
-    line = finding.get("line_number") or finding.get("line") or "N/A"
+    line = finding.get("line_number") or finding.get("start_line") or finding.get("line") or "N/A"
     description = finding.get("description") or finding.get("message") or "No description provided."
     impact = finding.get("business_impact") or "Not specified."
+    if finding.get("scanner") == "gitleaks":
+        description = "Potential secret detected. Value withheld."
     remediation = finding.get("remediation") or "Review the finding and apply the recommended secure coding fix."
 
     return f"""

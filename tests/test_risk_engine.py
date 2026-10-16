@@ -2,6 +2,7 @@
 import unittest
 
 from engine.risk_engine import Finding, evaluate
+from engine.gate import evaluate_policy
 
 
 class RiskEngineTests(unittest.TestCase):
@@ -13,8 +14,9 @@ class RiskEngineTests(unittest.TestCase):
 
         result = evaluate(findings)
 
-        self.assertEqual(result["decision"], "BLOCK")
         self.assertEqual(result["risk_score"], 10)
+        outcome = evaluate_policy(result, [], {"block_severities": ["CRITICAL"], "review_severities": ["HIGH"], "required_scanners": [], "fail_on_missing_required_scan": False})
+        self.assertEqual(outcome["decision"], "BLOCK")
 
     def test_high_finding_requires_review(self):
         findings = [
@@ -23,12 +25,12 @@ class RiskEngineTests(unittest.TestCase):
 
         result = evaluate(findings)
 
-        self.assertEqual(result["decision"], "REVIEW")
+        outcome = evaluate_policy(result, [], {"block_severities": ["CRITICAL"], "review_severities": ["HIGH"], "required_scanners": [], "fail_on_missing_required_scan": False})
+        self.assertEqual(outcome["decision"], "REVIEW")
 
     def test_no_findings_passes(self):
         result = evaluate([])
 
-        self.assertEqual(result["decision"], "PASS")
         self.assertEqual(result["risk_score"], 0)
 
     def test_unknown_severity_requires_review(self):
@@ -38,7 +40,8 @@ class RiskEngineTests(unittest.TestCase):
 
         result = evaluate(findings)
 
-        self.assertEqual(result["decision"], "REVIEW")
+        outcome = evaluate_policy(result, [], {"block_severities": ["CRITICAL"], "review_severities": ["HIGH"], "required_scanners": [], "fail_on_missing_required_scan": False})
+        self.assertEqual(outcome["decision"], "REVIEW")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,27 @@
+import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from engine.scanners import GitleaksAdapter, SemgrepAdapter, TrivyAdapter
+
+
+class AdapterParsingTests(unittest.TestCase):
+    def test_semgrep_normalizes_actual_result_shape(self):
+        raw = {"version": "1", "errors": [], "results": [{"check_id": "rule", "path": "a.py", "start": {"line": 3}, "end": {"line": 3}, "extra": {"severity": "ERROR", "message": "issue", "metadata": {}}}]}
+        result = SemgrepAdapter().parse(raw, Path("out.json"), 1, 0.1, ".", "")
+        self.assertEqual(result.status, "SUCCESS")
+        self.assertEqual(result.findings[0].severity, "HIGH")
+
+    def test_trivy_normalizes_vulnerability(self):
+        raw = {"Results": [{"Target": "requirements.txt", "Vulnerabilities": [{"VulnerabilityID": "CVE-1", "Severity": "CRITICAL", "PkgName": "demo", "InstalledVersion": "1", "FixedVersion": "2"}]}]}
+        result = TrivyAdapter().parse(raw, Path("out.json"), 0, 0.1, ".", "")
+        self.assertEqual(result.findings[0].fixed_version, "2")
+
+    def test_gitleaks_redacts_evidence(self):
+        raw = [{"RuleID": "generic-api-key", "Description": "secret", "File": "x.env", "StartLine": 1}]
+        result = GitleaksAdapter().parse(raw, Path("out.json"), 1, 0.1, ".", "")
+        self.assertEqual(result.findings[0].evidence, "[REDACTED]")
+
+
+if __name__ == "__main__":
+    unittest.main()

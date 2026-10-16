@@ -1,0 +1,73 @@
+name: Secure Release Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout complete repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Semgrep and Gitleaks
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install semgrep
+          go install github.com/gitleaks/gitleaks/v8@v8.24.2
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@e07451d2e059ed86c2870430ea286b3a9e0bf241
+        with:
+          version: v0.68.2
+          cache: true
+
+      - name: Display scanner versions
+        run: |
+          semgrep --version
+          trivy --version
+          gitleaks version
+
+      # The agent retains raw JSON only when a scanner actually produced it.
+      # It records missing executables, invalid JSON, and database/network failures
+      # as FAILED, which the policy blocks for required scanners.
+      - name: Run unified security scan and generate release reports
+        id: agent
+        continue-on-error: true
+        run: python -m engine.agent --scan --target .
+
+      - name: Generate Trivy CycloneDX SBOM
+        if: always()
+        continue-on-error: true
+        run: trivy fs --format cyclonedx --output reports/sbom.cdx.json .
+
+      - name: Upload security artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secure-release-reports
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce release policy
+        if: always()
+        run: |
+          test -s reports/release-report.json
+          python -m engine.gate

@@ -88,8 +88,8 @@ def normalize_finding(item: dict, tool: str = "manual") -> Finding:
         rule_id=str(rule_id),
         severity=severity,
         title=str(title),
-        tool=tool,
-        file=str(file_path),
+        scanner=tool,
+        path=str(file_path) or None,
         description=str(description),
         remediation=str(remediation),
     )
