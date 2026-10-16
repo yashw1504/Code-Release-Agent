@@ -9,7 +9,18 @@
   "review_severities": [
     "HIGH"
   ],
-  "unknown_severity_action": "REVIEW",
+  "unknown_severity_action": "BLOCK",
+  "block_on_secrets": true,
+  "max_total_findings": 10,
+  "max_high_findings": 0,
+  "max_medium_findings": 5,
+  "max_low_findings": 10,
+  "block_fix_available_vulnerabilities": true,
+  "block_iac_misconfigurations": true,
+  "allow_partial_scans": false,
+  "require_raw_output": true,
+  "block_rule_ids": [],
+  "block_vulnerability_ids": [],
   "fail_on_missing_required_scan": true,
   "required_scanners": [
     "semgrep",

@@ -70,7 +70,7 @@ class SemgrepAdapter(BaseAdapter):
 class TrivyAdapter(BaseAdapter):
     name = "trivy"
 
-    def filesystem_scan(self, target: Path, output: Path, scan_type: str = "vuln") -> ScanResult:
+    def filesystem_scan(self, target: Path, output: Path, scan_type: str = "vuln,misconfig") -> ScanResult:
         return self._run_json([self.executable, "fs", "--format", "json", "--output", str(output), "--scanners", scan_type, str(target)], output, str(target))
 
     def parse(self, raw: Any, output: Path, exit_code: int, duration: float, scope: str, stderr: str) -> ScanResult:
@@ -93,7 +93,9 @@ class TrivyAdapter(BaseAdapter):
             for vuln in result.get("Vulnerabilities") or []:
                 findings.append(Finding(str(vuln.get("VulnerabilityID", "UNSPECIFIED")), canonical_severity(vuln.get("Severity")), str(vuln.get("Title") or vuln.get("VulnerabilityID")), self.name, target, description=vuln.get("Description"), remediation=vuln.get("FixedVersion"), package_name=vuln.get("PkgName"), installed_version=vuln.get("InstalledVersion"), fixed_version=vuln.get("FixedVersion"), identifiers=(str(vuln.get("VulnerabilityID")),)))
             for misconfig in result.get("Misconfigurations") or []:
-                findings.append(Finding(str(misconfig.get("ID", "UNSPECIFIED")), canonical_severity(misconfig.get("Severity")), str(misconfig.get("Title", "IaC misconfiguration")), self.name, target, description=misconfig.get("Description"), remediation=misconfig.get("Resolution"), identifiers=tuple(str(x) for x in misconfig.get("PrimaryURL", []) if x)))
+                primary_url = misconfig.get("PrimaryURL")
+                identifiers = (str(primary_url),) if primary_url else ()
+                findings.append(Finding(str(misconfig.get("ID", "UNSPECIFIED")), canonical_severity(misconfig.get("Severity")), str(misconfig.get("Title", "IaC misconfiguration")), self.name, target, description=misconfig.get("Description"), remediation=misconfig.get("Resolution"), identifiers=identifiers, metadata={"finding_type": "iac_misconfiguration"}))
         return ScanResult(self.name, "SUCCESS", findings, str(output), duration, raw.get("Metadata", {}).get("Version"), scope=scope)
 
 
