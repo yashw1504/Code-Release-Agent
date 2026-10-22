@@ -34,4 +34,5 @@ python -m unittest discover -s tests -v
 
 ## Slack notification (optional)
 
-Create a Slack Incoming Webhook for the channel that should receive release-gate notifications. In the GitHub repository, add its URL as the Actions secret `SLACK_WEBHOOK_URL` under **Settings → Secrets and variables → Actions**. The workflow posts a PASS/REVIEW/BLOCK summary, risk score, finding count, policy reason, and a link to the workflow run. It never sends raw scanner reports or secret values to Slack.
+Create a Slack Incoming Webhook for the channel that should receive release-gate notifications. In the GitHub repository, add its URL as the Actions secret `SLACK_WEBHOOK_URL` under **Settings → Secrets and variables → Actions*. The workflow posts a PASS/REVIEW/BLOCK summary, risk score, finding count, policy reason, and a link to the workflow run. It never sends raw scanner reports or secret values to Slack.
+
